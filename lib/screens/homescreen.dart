@@ -14,6 +14,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      floatingActionButton: FloatingActionButton(onPressed: (){},
+      child: Icon(Icons.add),
+      ),
     );
   }
 }
