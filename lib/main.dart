@@ -31,55 +31,70 @@ class _MainScreenState extends State<MainScreen> {
   final ThemeData _lightTheme = ThemeData(
     brightness: Brightness.light,
     scaffoldBackgroundColor: Colors.white,
-    cardColor: Colors.white,
-    canvasColor: Colors.grey.shade300,
+
+    // Card ka color same as FAB (dark purple)
+    cardColor: const Color(0xFF4C1D95), // deep purple shade
+
 
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: Colors.black, // FAB ka main color
-      foregroundColor: Colors.white, // icon ka color
+      backgroundColor: Color(0xFF4C1D95), // Dark Purple FAB
+      foregroundColor: Colors.white, // Icon color white for contrast
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(16)), // rounded button
+        borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       elevation: 6,
     ),
 
     textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 20),
-      bodyMedium: TextStyle(color: Colors.black87, fontSize: 16),
+      bodyLarge: TextStyle(
+        color: Colors.black,
+        fontWeight: FontWeight.bold,
+        fontSize: 20,
+      ),
+      bodyMedium: TextStyle(
+        color: Colors.black87,
+        fontSize: 16,
+      ),
     ),
 
-
-
-
     iconTheme: const IconThemeData(color: Colors.black),
-    dividerColor: Colors.grey.shade400,
+    dividerColor: Colors.grey,
   );
+
 
 
 
   /// 🌙 Dark Theme
   final ThemeData _darkTheme = ThemeData(
     brightness: Brightness.dark,
-    scaffoldBackgroundColor: Colors.black,
-    cardColor: Colors.black ,
-    canvasColor:Color(0xff3a3a3a),
-    textTheme: const TextTheme(
-      bodyLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20),
-      bodyMedium: TextStyle(color: Colors.white70, fontSize: 16),
-    ),
+    scaffoldBackgroundColor: const Color(0xFF1E1B2E), // deep dark background
+    cardColor: const Color(0xFF8B5CF6), // light purple for cards
 
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: Colors.white, // FAB ka main color
-      foregroundColor: Colors.black, // icon ka color
+      backgroundColor: Color(0xFF8B5CF6), // Light purple FAB
+      foregroundColor: Colors.white, // Icon white for contrast
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.all(Radius.circular(16)), // rounded button
+        borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       elevation: 6,
     ),
 
+    textTheme: const TextTheme(
+      bodyLarge: TextStyle(
+        color: Colors.white,
+        fontWeight: FontWeight.bold,
+        fontSize: 20,
+      ),
+      bodyMedium: TextStyle(
+        color: Colors.white70,
+        fontSize: 16,
+      ),
+    ),
+
     iconTheme: const IconThemeData(color: Colors.white),
-    dividerColor: Colors.white70,
+    dividerColor: Colors.white24,
   );
+
   @override
   Widget build(BuildContext context) {
     return   AnimatedTheme(
