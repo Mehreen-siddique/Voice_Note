@@ -1,9 +1,8 @@
-import 'dart:io';
 import 'dart:async';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class RecordingScreen extends StatefulWidget {
   const RecordingScreen({super.key});
@@ -13,248 +12,250 @@ class RecordingScreen extends StatefulWidget {
 }
 
 class _RecordingScreenState extends State<RecordingScreen> with SingleTickerProviderStateMixin {
-  final AudioRecorder _recorder = AudioRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  bool isRecording = false;
-  bool isPaused = false;
-  Duration elapsed = Duration.zero;
+  bool isClicked = false;
+  int seconds = 0;
   Timer? timer;
-  String? recordedFilePath;
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isSpeechInitialized = false;
+  String _transcript = '';
+  String _speechStatus = 'Not initialized';
+  late AnimationController _waveController;
+  List<double> _waveHeights = List.generate(20, (_) => 10.0);
 
-  Future<void> _toggleRecording() async {
-    if (isRecording) {
-      if (isPaused) {
-        // Resume recording
-        await _recorder.resume();
+  @override
+  void initState() {
+    super.initState();
+    _initSpeech();
+    _waveController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    )..addListener(() {
+      if (isClicked) {
         setState(() {
-          isPaused = false;
+          _waveHeights = List.generate(20, (_) => 10 + Random().nextDouble() * 30);
         });
-        timer = Timer.periodic(const Duration(seconds: 1), (t) {
-          setState(() {
-            elapsed += const Duration(seconds: 1);
-          });
-        });
-      } else {
-        // Pause recording
-        await _recorder.pause();
-        setState(() {
-          isPaused = true;
-        });
-        timer?.cancel();
       }
-    } else {
-      // Start recording
-      if (await _recorder.hasPermission()) {
-        final dir = await getApplicationDocumentsDirectory();
-        final filePath =
-            '${dir.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-        await _recorder.start(
-          const RecordConfig(
-            encoder: AudioEncoder.aacLc,
-            bitRate: 128000,
-            sampleRate: 44100,
-          ),
-          path: filePath,
-        );
-
-        setState(() {
-          isRecording = true;
-          isPaused = false;
-          elapsed = Duration.zero;
-          recordedFilePath = null;
-        });
-
-        timer = Timer.periodic(const Duration(seconds: 1), (t) {
-          setState(() {
-            elapsed += const Duration(seconds: 1);
-          });
-        });
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Microphone permission denied')),
-        );
-      }
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    if (isRecording) {
-      final path = await _recorder.stop();
-      setState(() {
-        isRecording = false;
-        isPaused = false;
-        recordedFilePath = path;
-      });
-      timer?.cancel();
-    }
-  }
-
-  Future<void> _playRecording() async {
-    if (recordedFilePath != null) {
-      try {
-        await _audioPlayer.play(DeviceFileSource(recordedFilePath!));
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error playing audio: $e')),
-        );
-      }
-    }
-  }
-
-  String _formatTime(Duration d) {
-    final minutes = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return "$minutes:$seconds";
+    });
   }
 
   @override
   void dispose() {
     timer?.cancel();
-    _recorder.dispose();
-    _audioPlayer.dispose();
+    _waveController.dispose();
+    _speech.stop();
     super.dispose();
+  }
+
+  void _initSpeech() async {
+    _isSpeechInitialized = await _speech.initialize(
+      onStatus: (status) {
+        print('Speech status: $status');
+        setState(() {
+          _speechStatus = status;
+          // Restart listening if it stops unexpectedly while isClicked is true
+          if (isClicked && status == 'done' || status == 'notListening') {
+            _restartListening();
+          }
+        });
+      },
+      onError: (error) {
+        print('Speech error: $error');
+        setState(() {
+          _speechStatus = 'Error: ${error.errorMsg}';
+        });
+      },
+      debugLogging: true, // Enable detailed logging
+    );
+    if (!_isSpeechInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to initialize speech recognition')),
+      );
+    }
+    setState(() {});
+  }
+
+  void _restartListening() async {
+    if (!_isSpeechInitialized || !isClicked) return;
+    await _speech.stop();
+    await _speech.listen(
+      onResult: (result) {
+        setState(() {
+          _transcript = result.recognizedWords;
+          if (result.finalResult) {
+            print('Final result: $_transcript');
+          }
+        });
+      },
+      listenFor: const Duration(minutes: 10),
+      pauseFor: const Duration(seconds: 10),
+      partialResults: true,
+      listenMode: stt.ListenMode.dictation,
+    );
+  }
+
+  void startRecording() async {
+    if (!_isSpeechInitialized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Speech recognition not initialized')),
+      );
+      return;
+    }
+    setState(() {
+      isClicked = true;
+      seconds = 0;
+      _transcript = '';
+      _speechStatus = 'Starting...';
+    });
+
+    await _speech.listen(
+      onResult: (result) {
+        setState(() {
+          _transcript = result.recognizedWords;
+          if (result.finalResult) {
+            print('Final result: $_transcript');
+          }
+        });
+      },
+      listenFor: const Duration(minutes: 10),
+      pauseFor: const Duration(seconds: 10),
+      partialResults: true,
+      listenMode: stt.ListenMode.dictation,
+    );
+
+    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      setState(() {
+        seconds++;
+      });
+    });
+    _waveController.repeat();
+  }
+
+  void stopRecording() async {
+    await _speech.stop();
+    timer?.cancel();
+    _waveController.stop();
+    setState(() {
+      isClicked = false;
+      seconds = 0;
+      _waveHeights = List.generate(20, (_) => 10.0);
+    });
+  }
+
+  void saveRecording() {
+    print('Saved transcript: $_transcript');
+    stopRecording();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Recording saved: ${_transcript.isEmpty ? "No transcript" : _transcript}')),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: Stack(
-        alignment: Alignment.center,
-        children: [
-          // Recording status text above the button
-          if (isRecording)
-            Positioned(
-              top: MediaQuery.of(context).size.height / 2 - 120,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: theme.cardColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        title: const Text("Recording"),
+        actions: isClicked
+            ? [
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: saveRecording,
+          ),
+        ]
+            : [],
+      ),
+      body: Center(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (isClicked)
+              Container(
+                color: Colors.redAccent,
+                padding: const EdgeInsets.all(8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.fiber_manual_record,
-                      color: theme.colorScheme.error,
-                      size: 20,
-                    ),
+                    const Icon(Icons.fiber_manual_record, color: Colors.white),
                     const SizedBox(width: 8),
                     Text(
-                      isPaused
-                          ? "Paused ${_formatTime(elapsed)}"
-                          : "Recording... ${_formatTime(elapsed)}",
-                      style: TextStyle(
-                        color: theme.colorScheme.error,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      "Recording... $seconds s",
+                      style: const TextStyle(color: Colors.white),
                     ),
                   ],
                 ),
               ),
-            ),
-
-          // Recording button (persistent)
-          Positioned(
-            top: MediaQuery.of(context).size.height / 2 - 75,
-            child: GestureDetector(
-              onTap: _toggleRecording,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  color: isRecording
-                      ? theme.floatingActionButtonTheme.backgroundColor
-                      : theme.cardColor,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Icon(
-                    isRecording
-                        ? (isPaused ? Icons.play_arrow : Icons.pause)
-                        : Icons.mic,
-                    size: 60,
-                    color: isRecording
-                        ? theme.floatingActionButtonTheme.foregroundColor
-                        : theme.iconTheme.color,
-                  ),
+            if (isClicked)
+              Container(
+                height: 50,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(_waveHeights.length, (index) {
+                    return Container(
+                      width: 4,
+                      height: _waveHeights[index],
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      color: Colors.redAccent,
+                    );
+                  }),
                 ),
               ),
-            ),
-          ),
-
-          // Stop button (visible when recording)
-          if (isRecording)
-            Positioned(
-              top: MediaQuery.of(context).size.height / 2 + 100,
+            const SizedBox(height: 10),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              margin: EdgeInsets.only(top: isClicked ? 50 : 0),
               child: GestureDetector(
-                onTap: _stopRecording,
+                onTap: isClicked ? stopRecording : startRecording,
                 child: Container(
-                  width: 100,
-                  height: 100,
+                  height: 120,
+                  width: 120,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.error,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(60),
                   ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.stop,
-                      size: 40,
-                      color: Colors.white,
-                    ),
+                  child: Icon(
+                    isClicked ? Icons.stop : Icons.mic,
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    size: 35,
                   ),
                 ),
               ),
             ),
-
-          // Playback button and file path (visible when recording is stopped)
-          if (recordedFilePath != null)
-            Positioned(
-              bottom: 40,
-              left: 20,
-              right: 20,
-              child: Column(
-                children: [
-                  Text(
-                    "Saved: $recordedFilePath",
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.iconTheme.color,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: _playRecording,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text("Play Recording"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor : theme.colorScheme.primary,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                    ),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 10),
+            Text(
+              isClicked ? "Tap to stop" : "Tap to record",
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
-        ],
+            const SizedBox(height: 20),
+            if (isClicked)
+              Container(
+                height: 200,
+                width: double.infinity,
+                alignment: Alignment.center,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    _transcript.isEmpty ? "Listening for speech..." : _transcript,
+                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            if (isClicked)
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  'Status: $_speechStatus',
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

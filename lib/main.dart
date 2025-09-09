@@ -33,11 +33,11 @@ class _MainScreenState extends State<MainScreen> {
     scaffoldBackgroundColor: Colors.white,
 
     // Card ka color same as FAB (dark purple)
-    cardColor: const Color(0xFF4C1D95), // deep purple shade
+    cardColor: const Color(0xFF6750A4), // deep purple shade
 
 
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: Color(0xFF4C1D95), // Dark Purple FAB
+      backgroundColor: Color(0xFF6750A4), // Dark Purple FAB
       foregroundColor: Colors.white, // Icon color white for contrast
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(16)),
@@ -57,8 +57,7 @@ class _MainScreenState extends State<MainScreen> {
       ),
     ),
 
-    iconTheme: const IconThemeData(color: Colors.black),
-    dividerColor: Colors.grey,
+
   );
 
 
@@ -68,11 +67,11 @@ class _MainScreenState extends State<MainScreen> {
   final ThemeData _darkTheme = ThemeData(
     brightness: Brightness.dark,
     scaffoldBackgroundColor: const Color(0xFF1E1B2E), // deep dark background
-    cardColor: const Color(0xFF8B5CF6), // light purple for cards
+    cardColor: const Color(0xFFCDB9FB), // light purple for cards
 
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
-      backgroundColor: Color(0xFF8B5CF6), // Light purple FAB
-      foregroundColor: Colors.white, // Icon white for contrast
+      backgroundColor: Color(0xFFCDB9FB), // Light purple FAB
+      foregroundColor: Colors.black, // Icon white for contrast
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
@@ -82,7 +81,6 @@ class _MainScreenState extends State<MainScreen> {
     textTheme: const TextTheme(
       bodyLarge: TextStyle(
         color: Colors.white,
-        fontWeight: FontWeight.bold,
         fontSize: 20,
       ),
       bodyMedium: TextStyle(
@@ -91,8 +89,6 @@ class _MainScreenState extends State<MainScreen> {
       ),
     ),
 
-    iconTheme: const IconThemeData(color: Colors.white),
-    dividerColor: Colors.white24,
   );
 
   @override
