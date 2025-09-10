@@ -45,6 +45,17 @@ class _MainScreenState extends State<MainScreen> {
       elevation: 6,
     ),
 
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor:Color(0xFF6750A4), // dark button in light mode
+        foregroundColor: Colors.white, // text/icon color
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
+    ),
+
     textTheme: const TextTheme(
       bodyLarge: TextStyle(
         color: Colors.black,
@@ -76,6 +87,16 @@ class _MainScreenState extends State<MainScreen> {
         borderRadius: BorderRadius.all(Radius.circular(16)),
       ),
       elevation: 6,
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor:Color(0xFFCDB9FB), // dark button in light mode
+        foregroundColor: Colors.black, // text/icon color
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      ),
     ),
 
     textTheme: const TextTheme(
